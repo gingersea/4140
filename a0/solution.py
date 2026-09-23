@@ -1,62 +1,101 @@
-"""AIST4010 Fall 2026 — Assignment A0: Iris classification baseline.
-
-Trains a classifier on a0/X_train.csv + a0/y_train.csv and writes
-a0/submission.csv in the Kaggle sample_submission format (Id,Predicted).
-
-Usage:
-    python a0/solution.py
-"""
-
 from __future__ import annotations
 
+import logging
+from dataclasses import dataclass
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold, cross_val_score
-from sklearn.pipeline import make_pipeline
+from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-A0_DIR = Path(__file__).resolve().parent
-FEATURE_COLS = ["sepal_length", "sepal_width", "petal_length", "petal_width"]
+logger = logging.getLogger(__name__)
+
+BASE_DIR = Path(__file__).resolve().parent
+FEATURE_COLS = ("sepal_length", "sepal_width", "petal_length", "petal_width")
+TARGET_COL = "target"
+ID_COL = "Id"
+PRED_COL = "Predicted"
+
+CV_SPLITS = 5
+RANDOM_STATE = 0
+SUBMISSION_PATH = BASE_DIR / "submission.csv"
 
 
-def load_data() -> tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.DataFrame]:
-    """Read the A0 train/test splits and the sample submission."""
-    x_train = pd.read_csv(A0_DIR / "X_train.csv", header=None, names=FEATURE_COLS)
-    y_train = pd.read_csv(A0_DIR / "y_train.csv", header=None, names=["target"])["target"]
-    x_test = pd.read_csv(A0_DIR / "X_test.csv", header=None, names=FEATURE_COLS)
-    sample = pd.read_csv(A0_DIR / "sample_submission.csv")
-    return x_train, y_train, x_test, sample
+@dataclass(frozen=True)
+class Dataset:
+    x_train: pd.DataFrame
+    y_train: pd.Series
+    x_test: pd.DataFrame
+    sample_submission: pd.DataFrame
 
 
-def build_model():
+def _read_csv(path: Path, **kwargs) -> pd.DataFrame:
+    if not path.exists():
+        raise FileNotFoundError(f"Missing required file: {path}")
+    return pd.read_csv(path, **kwargs)
+
+
+def load_data() -> Dataset:
+    """Load train/test splits and the sample submission from BASE_DIR."""
+    x_train = _read_csv(BASE_DIR / "X_train.csv", header=None, names=FEATURE_COLS)
+    y_train = _read_csv(BASE_DIR / "y_train.csv", header=None, names=[TARGET_COL])[TARGET_COL]
+    x_test = _read_csv(BASE_DIR / "X_test.csv", header=None, names=FEATURE_COLS)
+    sample = _read_csv(BASE_DIR / "sample_submission.csv")
+
+    if len(x_train) != len(y_train):
+        raise ValueError(f"Train/test row mismatch: {len(x_train)} vs {len(y_train)}")
+    if len(x_test) != len(sample):
+        raise ValueError(f"Test/sample row mismatch: {len(x_test)} vs {len(sample)}")
+
+    return Dataset(x_train, y_train, x_test, sample)
+
+
+def build_model() -> Pipeline:
     """Standardise features, then fit multinomial logistic regression."""
     return make_pipeline(
         StandardScaler(),
-        LogisticRegression(max_iter=1000, random_state=0),
+        LogisticRegression(max_iter=1000, random_state=RANDOM_STATE),
     )
 
 
+def cross_validate(model: Pipeline, dataset: Dataset) -> tuple[float, float]:
+    cv = StratifiedKFold(n_splits=CV_SPLITS, shuffle=True, random_state=RANDOM_STATE)
+    scores = cross_val_score(
+        model, dataset.x_train, dataset.y_train, cv=cv, scoring="accuracy"
+    )
+    return float(scores.mean()), float(scores.std())
+
+
+def train_and_predict(model: Pipeline, dataset: Dataset) -> pd.Series:
+    model.fit(dataset.x_train, dataset.y_train)
+    return pd.Series(model.predict(dataset.x_test), name=PRED_COL)
+
+
+def save_submission(predictions: pd.Series, sample: pd.DataFrame, path: Path) -> None:
+    submission = pd.DataFrame({ID_COL: sample[ID_COL], PRED_COL: predictions.astype(int)})
+    submission.to_csv(path, index=False)
+    logger.info("wrote %s rows=%d counts=%s", path, len(submission),
+                submission[PRED_COL].value_counts().to_dict())
+
+
 def main() -> None:
-    x_train, y_train, x_test, sample = load_data()
-    print(f"train rows={len(x_train)}  test rows={len(x_test)}  classes={sorted(y_train.unique())}")
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+
+    dataset = load_data()
+    logger.info(
+        "train rows=%d  test rows=%d  classes=%s",
+        len(dataset.x_train), len(dataset.x_test),
+        sorted(dataset.y_train.unique()),
+    )
 
     model = build_model()
+    mean, std = cross_validate(model, dataset)
+    logger.info("%d-fold CV accuracy: %.4f +/- %.4f", CV_SPLITS, mean, std)
 
-    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
-    scores = cross_val_score(model, x_train, y_train, cv=cv, scoring="accuracy")
-    print(f"5-fold CV accuracy: {scores.mean():.4f} +/- {scores.std():.4f}")
-
-    model.fit(x_train, y_train)
-    preds = model.predict(x_test)
-
-    submission = pd.DataFrame({"Id": sample["Id"], "Predicted": preds.astype(int)})
-    out_path = A0_DIR / "submission.csv"
-    submission.to_csv(out_path, index=False)
-    print(f"wrote {out_path}  rows={len(submission)}  "
-          f"label counts={submission['Predicted'].value_counts().to_dict()}")
+    predictions = train_and_predict(model, dataset)
+    save_submission(predictions, dataset.sample_submission, SUBMISSION_PATH)
 
 
 if __name__ == "__main__":
