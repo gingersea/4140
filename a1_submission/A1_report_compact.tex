@@ -6,9 +6,7 @@
 \usepackage{booktabs}
 \usepackage{float}
 \usepackage{parskip}
-\usepackage[hidelinks,breaklinks]{hyperref}
 
-\newcommand{\R}{\mathbb{R}}
 \setlength{\parindent}{0pt}
 
 \begin{document}
@@ -61,8 +59,7 @@ Split the result using $1+e^{-x}=\frac{1}{\sigma(x)}$:
 % ----------------------------------------------------------------------
 \section{Question 2 (10 pts)}
 
-Prove: a multi-layer \emph{linear} neural network is equivalent to a single-layer
-network.
+Prove: a multi-layer linear neural network is equivalent to a single-layer network.
 
 $L$ affine layers: $h^{(l)}=W^{(l)}h^{(l-1)}+b^{(l)}$, $h^{(0)}=x$.
 By induction on $L$. Base case $L=1$: trivial.
@@ -117,20 +114,20 @@ AUC (trapezoid sum over FPR):
 % ----------------------------------------------------------------------
 \section{Question 4 (20 pts)}
 
-$lr=0.001$, $100$ epochs, init $W=\mathbf{0}$, $b=0$. Loss = average binary
+$lr=0.001$, $100$ epochs, init $W=0$, $b=0$. Loss = average binary
 cross-entropy. 2000 train samples (1000 per class), 100 test samples, 100 features,
 fixed seed.
 
 \textbf{(a)} Data: Gaussian inputs shifted to opposite sides of a random hyperplane;
 noise std $0.5$ and $3\%$ label flips $\Rightarrow$ not perfectly separable.
-See \texttt{A1\_Q4.py}.
+See A1\_Q4.py.
 
 \textbf{(b) GD (NumPy).}
-Accuracy $=\mathbf{0.84}$. Loss: train $0.6931\to0.6700$, test $0.6931\to0.6680$.
+Accuracy $=0.84$. Loss: train $0.6931\to0.6700$, test $0.6931\to0.6680$.
 $\lVert W\rVert_2=0.0483$, $b=0.0005$.
 
 \textbf{(c) SGD (NumPy).}
-Accuracy $=\mathbf{0.84}$. Loss: train $0.6931\to0.4219$, test $0.6931\to0.3787$.
+Accuracy $=0.84$. Loss: train $0.6931\to0.4219$, test $0.6931\to0.3787$.
 $\lVert W\rVert_2=1.5297$, $b=0.0217$.
 
 \textbf{(d) Loss curves:}
@@ -141,9 +138,9 @@ $\lVert W\rVert_2=1.5297$, $b=0.0217$.
 \includegraphics[width=0.45\textwidth]{sgd_loss.png}
 \end{figure}
 
-\textbf{(e) PyTorch.} \texttt{Linear(100,1)} + \texttt{Sigmoid}, \texttt{BCELoss},
-\texttt{torch.optim.SGD}, no loop over samples.
-Accuracy $=\mathbf{0.84}$. Loss: train $0.6931\to0.6700$, test $0.6929\to0.6677$.
+\textbf{(e) PyTorch.} Linear(100,1) + Sigmoid, BCELoss, torch.optim.SGD, no loop
+over samples.
+Accuracy $=0.84$. Loss: train $0.6931\to0.6700$, test $0.6929\to0.6677$.
 $\lVert W\rVert_2=0.0483$, $b=0.0005$ (zero init $\Rightarrow$ matches GD).
 
 \begin{figure}[H]
@@ -163,7 +160,7 @@ Iris, 105 samples, 5-fold stratified CV, standardized features.
 Model & CV accuracy \\
 \midrule
 Logistic regression & $0.9524 \pm 0.0426$ \\
-SVM (RBF)           & $\mathbf{0.9714 \pm 0.0381}$ \\
+SVM (RBF)           & $0.9714 \pm 0.0381$ \\
 FCN $4\to64\to32\to3$ & $0.9333 \pm 0.0486$ \\
 CNN (1-D)           & $0.9429 \pm 0.0356$ \\
 \bottomrule
@@ -191,26 +188,26 @@ learned deep CNN could handle ImageNet's 1.2M images / 1000 classes.
 training, overlapping pooling, LRN, augmentation + dropout (60M params).
 \textbf{Intuition:} conv weight sharing + hierarchical features; ReLU gradients do
 not vanish, so depth becomes trainable.
-\textbf{Implementation:} \url{https://github.com/pytorch/vision} (AlexNet)
+\textbf{Implementation:} https://github.com/pytorch/vision (AlexNet)
 
 \subsection{ResNet (Deep Residual Learning for Image Recognition)}
-\textbf{Motivation:} deeper plain nets had \emph{higher training error} --
-optimization problem, not overfitting.
+\textbf{Motivation:} deeper plain nets had higher training error -- optimization
+problem, not overfitting.
 \textbf{Novelty:} residual learning $H(x)=F(x)+x$ via skip connections; 152 layers,
 ILSVRC 2015 winner.
 \textbf{Intuition:} residuals near identity are easy to learn; skips give gradients
 a direct path, so extra depth only helps.
-\textbf{Implementation:} \url{https://github.com/pytorch/vision} (ResNet)
+\textbf{Implementation:} https://github.com/pytorch/vision (ResNet)
 
 \subsection{U-Net}
 \textbf{Motivation:} biomedical segmentation has tiny annotated datasets; sliding
 windows slow; upsampling lost detail.
 \textbf{Novelty:} symmetric encoder-decoder with skip concatenations + elastic
 augmentation; ISBI 2012/2015 winner.
-\textbf{Intuition:} encoder gives \emph{what} (context), decoder recovers
-\emph{where}; skips restore fine spatial detail.
-\textbf{Implementation:}
-\url{https://github.com/milesial/Pytorch-UNet}
+\textbf{Intuition:} encoder gives what (context), decoder recovers where; skips
+restore fine spatial detail.
+\textbf{Implementation:}\\
+https://github.com/milesial/Pytorch-UNet
 
 \subsection{SimCLR}
 \textbf{Motivation:} self-supervised features lagged supervised ones; prior
@@ -219,7 +216,7 @@ contrastive methods needed memory banks / special architectures.
 NT-Xent loss, large batches; matches supervised ResNet-50 on 1\% labels.
 \textbf{Intuition:} attract augmentations of the same image, repel others
 $\Rightarrow$ learn nuisance-invariant semantics.
-\textbf{Implementation:} \url{https://github.com/google-research/simclr}
+\textbf{Implementation:} https://github.com/google-research/simclr
 
 \subsection{MAE (Masked Autoencoders)}
 \textbf{Motivation:} masked prediction dominated NLP but images are too redundant
@@ -228,7 +225,7 @@ for naive reconstruction.
 $3$-$4\times$ faster; ViT-H $87.8\%$ ImageNet.
 \textbf{Intuition:} heavy masking forces semantics; discarding patches cuts compute;
 decoder thrown away after pre-training.
-\textbf{Implementation:}
-\url{https://github.com/facebookresearch/mae}
+\textbf{Implementation:}\\
+https://github.com/facebookresearch/mae
 
 \end{document}
