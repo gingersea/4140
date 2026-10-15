@@ -20,6 +20,13 @@ from sklearn.svm import SVC
 from torch.utils.data import DataLoader, TensorDataset
 
 BASE_DIR = "a0"
+# Resolve the data directory robustly: prefer a sibling a0/ folder, otherwise
+# the one next to this script in the repo.
+from pathlib import Path as _Path
+if not _Path(BASE_DIR).is_dir() and _Path(__file__).parent.joinpath("..", BASE_DIR).is_dir():
+    BASE_DIR = str(_Path(__file__).parent.joinpath("..", BASE_DIR).resolve())
+elif not _Path(BASE_DIR).is_dir() and _Path(__file__).parent.joinpath(BASE_DIR).is_dir():
+    BASE_DIR = str(_Path(__file__).parent.joinpath(BASE_DIR).resolve())
 RANDOM_STATE = 0
 N_FOLDS = 5
 EPOCHS = 300
