@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import torch
 
 ## First, write your name and SID here!
-name = ""
-SID = ""
+name = "JIANG Huanyun"
+SID = "1155233165"
 
 ## a. Data Generation
 """Generation function"""
