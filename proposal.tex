@@ -1,0 +1,122 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[margin=0.58in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{parskip}
+\usepackage{enumitem}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{2pt}
+\usepackage[hidelinks]{hyperref}
+\setlist{leftmargin=1.4em, itemsep=0pt, topsep=1pt, parsep=0pt}
+
+% Fit everything onto one page: 9pt body, tighter section titles
+\usepackage{etoolbox}
+\AtBeginDocument{\fontsize{9}{11}\selectfont}
+\usepackage{titlesec}
+\titlespacing*{\section}{0pt}{6pt}{2pt}
+\titleformat*{\section}{\normalsize\bfseries}
+\titleformat*{\subsection}{\normalsize\bfseries}
+
+\begin{document}
+
+\begin{center}
+  {\Large\bfseries Project Proposal: Physical Consistency of Video Generation Models}\\[0.25em]
+  {\normalsize A Two-Stage Benchmark on Open-Source Text-to-Video Models}\\[0.5em]
+  \textbf{JIANG Huanyun} (1155233165) \quad AIST4010 Foundation of Applied Deep Learning
+\end{center}
+
+\section*{1. Problem Statement}
+
+State-of-the-art text-to-video (T2V) models (Sora, Runway, Kling) produce visually
+stunning output, yet recent benchmarks --- Physics-IQ, VideoPhy-2, PhyGenBench,
+T2VPhysBench, Principia --- show that \emph{visual plausibility does not imply physical
+correctness}: SOTA generators violate gravity, momentum conservation, and contact
+mechanics while scoring high on visual quality. This breaks the downstream uses for
+which video generators are framed as ``world models'' (robot simulation, embodied-AI
+data augmentation). This project asks: \textbf{how physically consistent are open-source
+T2V models, measured fully locally and reproducibly at zero API cost?} \textbf{Part A
+(measurable physics):} generate simple phenomena with exactly known physics (free fall,
+projectile, pendulum, horizontal motion with friction), extract the object trajectory
+frame-by-frame, and fit physical parameters ($g$, pendulum period $T$, deceleration).
+\textbf{Part B (complex scenes):} generate collisions, fluids, support, multi-object
+interactions, then count physical violations (floating, interpenetration, wrong collision
+outcomes) with a vision-language model (VLM) judge under a fixed protocol.
+
+\section*{2. Data}
+
+All data is generated locally on one RTX 5090 (32\,GB), not downloaded.
+
+\begin{itemize}
+  \item \textbf{Models}: Wan2.1-T2V-1.3B (Apache-2.0, 29\,GB, 480p@16\,fps, 81 frames)
+        and CogVideoX-5B, open on Hugging Face; fallback Wan2.2-TI2V-5B.
+  \item \textbf{Prompt sets}: Part A: 4 prompts, each a single red ball (stated 10\,cm
+        diameter; 1\,m pendulum string --- the pixel-to-meter calibration) on a plain
+        white background. Part B: 8 prompts, realistic fixed-camera scenes, no text.
+        Each prompt $\times$ 3 seeds $\times$ 2 models $=72$ videos.
+  \item \textbf{Ground-truth anchors}: (i) synthetic animations rendered with exact
+        kinematics ($g{=}9.8$) to validate the trajectory detector before it touches
+        generated video; (ii) 4 calibration prompts with known violations (person
+        floating mid-air; glass suspended unsupported) that the VLM judge must flag, or
+        the judging protocol is declared invalid.
+  \item \textbf{Obstacles}: per-video generation cost (minutes), detector failures on
+        artifact-heavy frames, judge subjectivity. Mitigations: 72-video scale,
+        explicit detection-failure signaling instead of garbage fits, calibration-gated
+        judging.
+\end{itemize}
+
+\section*{3. Methods}
+
+A Python pipeline (``physcheck''): PyTorch/diffusers for generation, OpenCV/SciPy for
+detection, pluggable VLM for judging.
+
+\textbf{(a) Generation.} Standard diffusers pipelines (WanPipeline, CogVideoXPipeline),
+fixed seeds, metadata sidecars (fps, frames, commit hash) for traceability.
+
+\textbf{(b) Part A detector.} Median-frame background subtraction isolates the ball; the
+largest connected component gives centroid and pixel diameter per frame. The centroid
+sequence is the trajectory; the diameter plus the known object size gives the
+pixel-to-meter scale. Least-squares fits: $y(t)=y_0+v_0t+\tfrac12 gt^2$ (fall), a
+parabola (projectile), $x(t)=A\cos(\sqrt{g/L}\,t+\phi)$ (pendulum), $x(t)=v_0t-\tfrac12
+at^2$ (friction). $R^2$ and pixel-RMS gates reject garbage fits. \emph{Validation:} the
+detector must recover $g{\approx}9.8$ and the correct period from the synthetic
+animations before analyzing generated video.
+
+\textbf{(c) Part B judge.} Each video becomes an 8-frame annotated grid; a VLM judge
+(Claude by default, GPT-4o/Gemini swappable) answers a fixed template and outputs JSON:
+per violation --- frame index, category (gravity/support/collision/fluid/rigid-body),
+description, confidence. Judging is blind to model identity, in isolated calls.
+
+\textbf{Relation to existing work}: we reuse open-weight models and the VLM-judge
+methodology of VideoPhy/PhyGenBench unmodified, but those benchmarks target commercial
+APIs and cannot be reproduced locally. Our contribution: the objective Part A
+(programmatic physics fitting, done by no prior video benchmark) plus a
+calibration-gated local judging protocol.
+
+\section*{4. Evaluation and Expected Results}
+
+\textbf{Quantitative.} Part A: fitted $g$ (m/s$^2$) and $T$ (s) with standard errors from
+the fit covariance, relative error vs.\ truth, track/fit success rates. Part B: violation
+rate, mean violations per video, per-category counts; leaderboard across models; seed
+spread as uncertainty. Pipeline-trust evidence: the detector-validation table (true vs.\
+recovered $g$, $T$ on synthetic animations) and the calibration-gate result.
+
+\textbf{Qualitative.} Figures: (i) extracted trajectories overlaid with fitted
+parabola/sine curves; (ii) Part B frame grids with judge annotations; (iii) leaderboard
+tables and violation heatmaps.
+
+\textbf{Hypotheses.} (H1) Open T2V models do \emph{not} encode quantitative physics:
+fitted $g$ deviates from 9.8\,m/s$^2$ by tens of percent; periods contradict
+$2\pi\sqrt{L/g}$ --- diffusion imitates appearance, not dynamics. (H2) Part B violation
+rates high for collision/support, lower for fluids, mirroring commercial-model findings.
+(H3) The detector recovers synthetic ground truth within 10\%. (H4) The VLM judge passes
+the calibration gate, supporting its use as a reproducible metric. Versus commercial
+models on Physics-IQ/VideoPhy, open models should be comparable or worse in violation
+rate --- but, unlike those baselines, measurable in physical units for the first time.
+
+\vspace{2pt}
+\noindent\rule{\textwidth}{0.4pt}\\[2pt]
+\small\textit{Work products: ``physcheck'' benchmark code (MIT), prompt sets, leaderboard,
+paper-draft report; all experiments local, zero API cost.}
+
+\end{document}
