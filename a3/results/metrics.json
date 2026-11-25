@@ -1,0 +1,59 @@
+{
+  "gpu": "NVIDIA GeForce RTX 5090",
+  "torch": "2.9.0+cu128",
+  "seed": 42,
+  "rnn_trials": [
+    {
+      "epochs": 30,
+      "lr": 0.003,
+      "batch_size": 128,
+      "validation_rmse": 1.032219409942627
+    },
+    {
+      "epochs": 100,
+      "lr": 0.001,
+      "batch_size": 64,
+      "validation_rmse": 0.08547136932611465
+    },
+    {
+      "epochs": 200,
+      "lr": 0.001,
+      "batch_size": 64,
+      "validation_rmse": 0.17482727766036987
+    }
+  ],
+  "models": {
+    "RNN": {
+      "epochs": 100,
+      "lr": 0.001,
+      "batch_size": 64,
+      "final_mse": 0.0008007848518900573,
+      "forecast_ms": 9.352986235171556,
+      "forecast_rmse": 0.47119346044025273
+    },
+    "GRU": {
+      "epochs": 100,
+      "lr": 0.003,
+      "batch_size": 64,
+      "final_mse": 0.0006681930390186608,
+      "forecast_ms": 9.67475026845932,
+      "forecast_rmse": 0.4219413271397383
+    },
+    "Attention": {
+      "epochs": 100,
+      "lr": 0.003,
+      "batch_size": 64,
+      "final_mse": 0.00604693777859211,
+      "forecast_ms": 14.580707997083664,
+      "forecast_rmse": 1.2076523700530206
+    },
+    "Logistic": {
+      "epochs": 100,
+      "lr": 0.003,
+      "batch_size": 64,
+      "final_mse": 0.0009248357964679599,
+      "forecast_ms": 4.650745075196028,
+      "forecast_rmse": 0.24888704294595515
+    }
+  }
+}
